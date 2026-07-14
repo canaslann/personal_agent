@@ -1,0 +1,15 @@
+# Google OAuth kimlik bilgileri - ASLA repoya gitmemeli
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Memory store (local data)
+memory/chroma_store/
+
+# Env
+.env
