@@ -11,9 +11,9 @@ yani bu sadece bir tasarım kararı değil, API seviyesinde garanti.
 import base64
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone
-
 from langchain_core.tools import tool
 from auth import get_calendar_service, get_gmail_service
+from tools.weather import get_weather as _get_weather, get_forecast as _get_forecast
 
 
 @tool
@@ -336,6 +336,25 @@ def todo_delete(task_id: str) -> str:
     """
     return _delete_task(int(task_id))
 
+@tool
+def weather(city: str) -> str:
+    """Belirtilen şehir için güncel hava durumunu getirir.
+
+    Args:
+        city: Şehir adı (örn: "Istanbul", "Ankara", "London")
+    """
+    return _get_weather(city)
+
+
+@tool
+def weather_forecast(city: str) -> str:
+    """Belirtilen şehir için 3 günlük hava tahminini getirir.
+
+    Args:
+        city: Şehir adı (örn: "Istanbul", "Ankara", "London")
+    """
+    return _get_forecast(city)
+
 
 ALL_TOOLS = [
     create_calendar_event,
@@ -351,4 +370,6 @@ ALL_TOOLS = [
     todo_list,
     todo_complete,
     todo_delete,
+    weather,
+    weather_forecast
 ]

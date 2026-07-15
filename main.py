@@ -8,6 +8,9 @@ Kullanım:
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from agent import build_graph
 from memory.store import AgentMemory
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def main():
     print("Kişisel Asistan başlatıldı. Çıkmak için 'exit' yaz.\n")
