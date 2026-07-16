@@ -1,71 +1,57 @@
 # Kişisel Asistan Agent
 
-Ücretsiz, local çalışan, tool-calling kişisel asistan.
-LangGraph + Groq + Google Calendar/Gmail + RAG memory.
-
-## Özellikler
-
-- **Google Calendar** — etkinlik oluştur, listele, güncelle, sil
-- **Gmail** — taslak oluştur, listele, sil, gelen kutusu oku, arama yap
-- **To-do listesi** — görev ekle, listele, tamamla, sil (SQLite, kalıcı)
-- **Hava durumu** — güncel durum ve 3 günlük tahmin (OpenWeatherMap)
-- **RAG memory** — geçmiş konuşmaları hatırlar (ChromaDB, session'lar arası)
-- **Doğal dil tarih/saat** — "yarın saat 3", "gelecek pazartesi" gibi ifadeleri anlar
+Ücretsiz, local çalışan, tool-calling kişisel asistan. LangGraph + Groq.
 
 ## Mimari
 
 ```
-Kullanıcı
-    ↓
-Agent (LangGraph — ReAct loop)
-    ↓
-LLM (Llama 3.3 70B / Groq, ücretsiz)
-    ↓ tool seçer
-┌───────────────────────────────────────────┐
-│  Calendar  │  Gmail  │  Todo  │  Weather  │
-│  (Google   │ (Google │(SQLite)│  (OWM     │
-│   API)     │  API)   │        │   API)    │
-└───────────────────────────────────────────┘
-    ↓
-RAG Memory (ChromaDB — geçmiş konuşmalar)
+Sen -> Agent (Llama 3.3 70B / Groq, ücretsiz) -> Tool seçer
+                                                    |
+                  +----------+----------+----------+----------+----------+
+                  |          |          |          |          |          |
+            Takvim (4)  Gmail (5)  Görev (4)  Wikipedia  Hava Durumu (2)
+            create      draft      add        summary    weather
+            list        list       list                  weather_forecast
+            update      delete     complete
+            delete      inbox      delete
+                        search
 ```
 
-## Kurulum
+`agent.py` ReAct-style bir loop: kullanıcı mesajı → LLM tool seçer →
+tool çalışır → sonuç LLM'e döner → LLM final cevabı üretir.
 
-### 1. Repoyu klonla
+## Mevcut Tool'lar (16)
 
-```powershell
-git clone https://github.com/kullanici/personal-agent.git
-cd personal-agent
-```
+### Google Calendar (4)
+- `create_calendar_event` — yeni etkinlik oluşturur
+- `list_calendar_events` — yaklaşan 10 etkinliği listeler
+- `update_calendar_event` — mevcut etkinliği günceller
+- `delete_calendar_event` — etkinliği siler
 
-### 2. Bağımlılıkları kur
+### Gmail (5)
+- `draft_email` — taslak oluşturur (gönderme YOK, OAuth scope seviyesinde garanti)
+- `list_drafts` — taslakları listeler
+- `delete_draft` — taslağı siler
+- `list_inbox` — gelen kutusunu listeler
+- `search_emails` — Gmail'de arama yapar
 
-```powershell
-pip install -r requirements.txt
-```
+### Yapılacaklar Listesi / SQLite (4)
+- `todo_add` — görev ekler
+- `todo_list` — görevleri listeler
+- `todo_complete` — görevi tamamlandı işaretler
+- `todo_delete` — görevi siler
 
-### 3. API key'leri ayarla
+### Hava Durumu / OpenWeatherMap (2)
+- `weather` — herhangi bir şehir için güncel hava durumu getirir
+- `weather_forecast` — 3 günlük hava tahmini getirir
 
-Proje kök dizininde `.env` dosyası oluştur:
+### Wikipedia (1)
+- `fetch_wikipedia_summary` — önce Türkçe, sonra İngilizce Wikipedia'dan özet getirir
 
-```
-GROQ_API_KEY=gsk_xxxxxxxxxxxx
-OPENWEATHER_API_KEY=xxxxxxxxxxxx
-```
-
-**Groq API key** (ücretsiz, kredi kartsız):
-1. https://console.groq.com → ücretsiz hesap aç
-2. API Keys → yeni key oluştur
-
-**OpenWeatherMap API key** (ücretsiz, kredi kartsız):
-1. https://openweathermap.org/api → ücretsiz hesap aç
-2. API Keys sekmesinden key'ini kopyala
-
-### 4. Google Calendar + Gmail kurulumu
+## Google Calendar + Gmail Kurulumu
 
 1. https://console.cloud.google.com → yeni proje oluştur
-2. **APIs & Services > Library** → şunları etkinleştir:
+2. **APIs & Services > Library** → etkinleştir:
    - Google Calendar API
    - Gmail API
 3. **APIs & Services > OAuth consent screen**:
@@ -75,91 +61,104 @@ OPENWEATHER_API_KEY=xxxxxxxxxxxx
    - Application type: **Desktop app**
    - JSON olarak indir, adını `credentials.json` yap, proje kök dizinine koy
 
-İlk çalıştırmada tarayıcı otomatik açılır, Google hesabınla giriş yapıp
-izin verirsin. Sonrasında `token.json` oluşur, bir daha login istemez.
+İlk çalıştırmada tarayıcı açılır, Google hesabınla giriş yapıp izin verirsin.
+Sonrasında `token.json` oluşur, bir daha login istemez.
 
-### 5. Çalıştır
+> **ÖNEMLİ:** OAuth scope'ları değiştiğinde `token.json` silinmeli ve
+> OAuth akışı yeniden çalıştırılmalı, yoksa eski izinler sessizce devam eder.
+
+## Kurulum
+
+```powershell
+cd personal-agent
+pip install -r requirements.txt
+```
+
+## API Key'ler
+
+### Groq (ücretsiz, kredi kartsız)
+1. https://console.groq.com → ücretsiz hesap aç
+2. API Keys → yeni key oluştur
+
+### OpenWeatherMap (ücretsiz, kredi kartsız)
+1. https://openweathermap.org/api → ücretsiz hesap aç
+2. API Keys sekmesinden key'ini kopyala
+
+`.env` dosyası oluştur:
+```
+GROQ_API_KEY=gsk_xxxxxxxxxxxx
+OPENWEATHER_API_KEY=xxxxxxxxxxxx
+```
+
+### Groq Ücretsiz Tier Limitleri (llama-3.3-70b-versatile)
+- Dakikada: 30 istek, 6.000 token
+- Günlük: 1.000 istek
+- Sıfırlanma: UTC 00:00 (Türkiye: 03:00)
+
+## Çalıştırma
 
 ```powershell
 python main.py
 ```
 
-## Kullanım Örnekleri
+## Örnek Kullanım
 
 ```
-Sen: yarın saat 15'te proje toplantısı ekle
-Asistan: Etkinlik oluşturuldu: 'proje toplantısı' - 2026-07-04 15:00
-
-Sen: gelen kutumda ne var?
-Asistan: [Son 10 email listelenir]
-
-Sen: yapılacaklara raporu bitir ekle
-Asistan: Görev eklendi: 'raporu bitir'
-
-Sen: görev listemi göster
-Asistan: [1] ○ raporu bitir  (ID:1)
+Sen: yarın saat 15:00'te proje toplantısı ekle
+Asistan: Etkinlik oluşturuldu: 'proje toplantısı' - 2026-07-17 15:00.
 
 Sen: İstanbul'da hava nasıl?
-Asistan: İstanbul, TR
-         Durum: parçalı bulutlu
-         Sıcaklık: 28°C (hissedilen: 30°C)
-         Nem: %65
+Asistan: İstanbul, TR — parçalı bulutlu, 28°C (hissedilen: 30°C)
 
-Sen: ahmet@gmail.com'a toplantı hatırlatması maili taslağı hazırla
-Asistan: Taslak oluşturuldu: 'Toplantı Hatırlatması' -> ahmet@gmail.com
+Sen: Ankara için 3 günlük hava tahmini ver
+Asistan: Ankara, TR — 3 Günlük Tahmin: ...
+
+Sen: Atatürk hakkında bilgi ver
+Asistan: **Mustafa Kemal Atatürk** — Türkiye Cumhuriyeti'nin kurucusu...
+
+Sen: matematik ödevini yapılacaklara ekle
+Asistan: Görev eklendi: 'matematik ödevini yap'
+
+Sen: ahmet@example.com'a toplantı hatırlatması taslağı hazırla
+Asistan: Taslak oluşturuldu: 'Toplantı Hatırlatması' -> ahmet@example.com
 ```
 
-## Tool Listesi (13 tool)
+## Memory (RAG) Sistemi
 
-| Tool | Açıklama |
-|------|----------|
-| `create_calendar_event` | Takvime etkinlik ekle |
-| `list_calendar_events` | Yaklaşan etkinlikleri listele |
-| `update_calendar_event` | Etkinlik güncelle |
-| `delete_calendar_event` | Etkinlik sil |
-| `draft_email` | Gmail taslağı oluştur |
-| `list_drafts` | Taslakları listele |
-| `delete_draft` | Taslak sil |
-| `list_inbox` | Gelen kutusu listele |
-| `search_emails` | Gmail'de arama yap |
-| `todo_add` | Görev ekle |
-| `todo_list` | Görev listesi |
-| `todo_complete` | Görevi tamamla |
-| `todo_delete` | Görev sil |
-| `weather` | Güncel hava durumu |
-| `weather_forecast` | 3 günlük hava tahmini |
-
-## Proje Yapısı
-
-```
-personal-agent/
-├── main.py              # CLI — giriş noktası
-├── agent.py             # LangGraph graph, ReAct loop
-├── auth.py              # Google OAuth 2.0
-├── requirements.txt
-├── .env                 # API key'ler (repoya gitmiyor)
-├── credentials.json     # Google OAuth client (repoya gitmiyor)
-├── token.json           # Google OAuth token (repoya gitmiyor)
-├── todo.db              # SQLite veritabanı (repoya gitmiyor)
-├── tools/
-│   ├── agent_tools.py   # Tüm tool tanımları
-│   ├── todo.py          # To-do SQLite yönetimi
-│   └── weather.py       # Hava durumu API
-└── memory/
-    ├── store.py         # ChromaDB RAG memory
-    └── chroma_store/    # Vector DB dosyaları (repoya gitmiyor)
-```
-
-## Teknik Detaylar
-
-- **LLM:** Llama 3.3 70B (Groq ücretsiz tier — dakikalık/günlük token limiti var)
-- **Agent framework:** LangGraph (ReAct-style tool-calling loop)
-- **Memory:** ChromaDB embedded (local, sunucu gerektirmez)
-- **Calendar/Gmail:** Google API v3, OAuth 2.0 (gmail.compose + gmail.readonly scope)
-- **Email:** Sadece taslak oluşturma — gönderme YOK (OAuth scope seviyesinde garanti)
+ChromaDB ile local vector store. Her konuşma otomatik kaydedilir,
+ilgili geçmiş bilgiler bir sonraki konuşmada prompt'a eklenir.
+`memory/chroma_store/` dizininde saklanır (`.gitignore`'da).
 
 ## Bilinen Sınırlamalar
 
-- Groq ücretsiz tier: günlük 100k token limiti — yoğun kullanımda limit aşılabilir
-- Email gönderme yok, sadece taslak (bilinçli tasarım kararı)
-- Hava durumu: OpenWeatherMap ücretsiz tier günlük 1000 istek
+- Groq ücretsiz tier rate limit var — çok hızlı art arda istek atarsan kısa süreli hata alabilirsin
+- Email gönderme YOK, sadece taslak (OAuth `gmail.compose` scope'u gönderimi API seviyesinde engelliyor)
+- Wikipedia ve hava durumu tool'ları ağ bağlantısı gerektirir
+- OpenWeatherMap ücretsiz tier: günlük 1.000 istek
+
+## Planlanan Özellikler
+
+- Döviz / kripto / altın fiyat sorgulama
+- Gün sonu özeti
+
+## Dosya Yapısı
+
+```
+personal-agent/
+├── agent.py              # LangGraph agent, ReAct loop
+├── main.py               # CLI giriş noktası
+├── auth.py               # Google OAuth yönetimi
+├── requirements.txt
+├── .env                  # (gitignore) API key'ler
+├── credentials.json      # (gitignore) Google OAuth client
+├── token.json            # (gitignore) OAuth token
+├── todo.db               # (gitignore) SQLite görev listesi
+├── tools/
+│   ├── agent_tools.py    # Tüm tool tanımları + ALL_TOOLS listesi
+│   ├── todo.py           # SQLite to-do implementasyonu
+│   ├── weather.py        # OpenWeatherMap hava durumu
+│   └── wikipedia_tool.py # Wikipedia REST API tool
+└── memory/
+    ├── store.py           # ChromaDB AgentMemory sınıfı
+    └── chroma_store/      # (gitignore) Vector store verisi
+```
