@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from langchain_core.tools import tool
 from auth import get_calendar_service, get_gmail_service
 from tools.weather import get_weather as _get_weather, get_forecast as _get_forecast
-
+from tools.wikipedia_tool import fetch_wikipedia_summary
 
 @tool
 def create_calendar_event(title: str, date: str, time: str, participants: str = "") -> str:
@@ -371,5 +371,6 @@ ALL_TOOLS = [
     todo_complete,
     todo_delete,
     weather,
-    weather_forecast
+    weather_forecast,
+    fetch_wikipedia_summary
 ]
