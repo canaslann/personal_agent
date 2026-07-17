@@ -15,6 +15,7 @@ from langchain_core.tools import tool
 from auth import get_calendar_service, get_gmail_service
 from tools.weather import get_weather as _get_weather, get_forecast as _get_forecast
 from tools.wikipedia_tool import fetch_wikipedia_summary
+from tools.finance_tool import get_exchange_rate, get_gold_price, get_crypto_price
 
 @tool
 def create_calendar_event(title: str, date: str, time: str, participants: str = "") -> str:
@@ -372,5 +373,8 @@ ALL_TOOLS = [
     todo_delete,
     weather,
     weather_forecast,
-    fetch_wikipedia_summary
+    fetch_wikipedia_summary,
+    get_exchange_rate,
+    get_gold_price,
+    get_crypto_price
 ]
