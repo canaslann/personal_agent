@@ -7,20 +7,20 @@
 ```
 Sen -> Agent (Llama 3.3 70B / Groq, ücretsiz) -> Tool seçer
                                                     |
-                  +----------+----------+----------+----------+----------+
-                  |          |          |          |          |          |
-            Takvim (4)  Gmail (5)  Görev (4)  Wikipedia  Hava Durumu (2)
-            create      draft      add        summary    weather
-            list        list       list                  weather_forecast
-            update      delete     complete
-            delete      inbox      delete
-                        search
+        +----------+----------+----------+----------+----------+----------+
+        |          |          |          |          |          |          |
+  Takvim (4)  Gmail (5)  Görev (4)  Wikipedia  Hava Durumu (2)  Finans (3)
+  create      draft      add        summary    weather        exchange_rate
+  list        list       list                  weather_forecast gold_price
+  update      delete     complete                              crypto_price
+  delete      inbox      delete
+              search
 ```
 
 `agent.py` ReAct-style bir loop: kullanıcı mesajı → LLM tool seçer →
 tool çalışır → sonuç LLM'e döner → LLM final cevabı üretir.
 
-## Mevcut Tool'lar (16)
+## Mevcut Tool'lar (19)
 
 ### Google Calendar (4)
 - `create_calendar_event` — yeni etkinlik oluşturur
@@ -46,7 +46,12 @@ tool çalışır → sonuç LLM'e döner → LLM final cevabı üretir.
 - `weather_forecast` — 3 günlük hava tahmini getirir
 
 ### Wikipedia (1)
-- `fetch_wikipedia_summary` — önce Türkçe, sonra İngilizce Wikipedia'dan özet getirir
+- `fetch_wikipedia_summary` — MediaWiki REST API üzerinden özet getirir (TR + EN)
+
+### Finans / Yahoo Finance (3)
+- `get_exchange_rate` — döviz kuru getirir (USD/TRY, EUR/TRY, GBP/TRY vb.)
+- `get_gold_price` — gram altın fiyatını TL ve USD cinsinden getirir
+- `get_crypto_price` — kripto para fiyatı getirir (BTC, ETH, SOL vb.)
 
 ## Google Calendar + Gmail Kurulumu
 
@@ -90,9 +95,12 @@ GROQ_API_KEY=gsk_xxxxxxxxxxxx
 OPENWEATHER_API_KEY=xxxxxxxxxxxx
 ```
 
+> **NOT:** Finans tool'ları (döviz, altın, kripto) Yahoo Finance üzerinden
+> çalışır — `yfinance` kütüphanesi, API key gerektirmez.
+
 ### Groq Ücretsiz Tier Limitleri (llama-3.3-70b-versatile)
 - Dakikada: 30 istek, 6.000 token
-- Günlük: 1.000 istek
+- Günlük: 100.000 token
 - Sıfırlanma: UTC 00:00 (Türkiye: 03:00)
 
 ## Çalıştırma
@@ -121,6 +129,15 @@ Asistan: Görev eklendi: 'matematik ödevini yap'
 
 Sen: ahmet@example.com'a toplantı hatırlatması taslağı hazırla
 Asistan: Taslak oluşturuldu: 'Toplantı Hatırlatması' -> ahmet@example.com
+
+Sen: dolar kaç TL?
+Asistan: 1 USD = 38.4500 TRY
+
+Sen: 1 gram altın ne kadar?
+Asistan: Gram Altın: 4.021,30 TL / 104,52 USD
+
+Sen: bitcoin kaç dolar?
+Asistan: BTC = 118,432.50 USD
 ```
 
 ## Memory (RAG) Sistemi
@@ -131,14 +148,14 @@ ilgili geçmiş bilgiler bir sonraki konuşmada prompt'a eklenir.
 
 ## Bilinen Sınırlamalar
 
-- Groq ücretsiz tier rate limit var — çok hızlı art arda istek atarsan kısa süreli hata alabilirsin
+- Groq ücretsiz tier günlük 100K token limiti var — limitine ulaşırsan UTC 00:00'da sıfırlanır
 - Email gönderme YOK, sadece taslak (OAuth `gmail.compose` scope'u gönderimi API seviyesinde engelliyor)
-- Wikipedia ve hava durumu tool'ları ağ bağlantısı gerektirir
+- Wikipedia, hava durumu ve finans tool'ları ağ bağlantısı gerektirir
 - OpenWeatherMap ücretsiz tier: günlük 1.000 istek
+- `yfinance` fiyatları Yahoo Finance'ten çeker, anlık borsa fiyatlarında ~15 dk gecikme olabilir
 
 ## Planlanan Özellikler
 
-- Döviz / kripto / altın fiyat sorgulama
 - Gün sonu özeti
 
 ## Dosya Yapısı
@@ -157,7 +174,8 @@ personal-agent/
 │   ├── agent_tools.py    # Tüm tool tanımları + ALL_TOOLS listesi
 │   ├── todo.py           # SQLite to-do implementasyonu
 │   ├── weather.py        # OpenWeatherMap hava durumu
-│   └── wikipedia_tool.py # Wikipedia REST API tool
+│   ├── wikipedia_tool.py # Wikipedia MediaWiki REST API tool
+│   └── finance_tool.py   # Yahoo Finance döviz/altın/kripto tool'ları
 └── memory/
     ├── store.py           # ChromaDB AgentMemory sınıfı
     └── chroma_store/      # (gitignore) Vector store verisi
