@@ -7,10 +7,10 @@
 ```
 Sen -> Agent (Llama 3.3 70B / Groq, ücretsiz) -> Tool seçer
                                                     |
-        +----------+----------+----------+----------+----------+----------+
-        |          |          |          |          |          |          |
-  Takvim (4)  Gmail (5)  Görev (4)  Wikipedia  Hava Durumu (2)  Finans (3)
-  create      draft      add        summary    weather        exchange_rate
+        +----------+----------+----------+----------+----------+----------+----------+
+        |          |          |          |          |          |          |          |
+  Takvim (4)  Gmail (5)  Görev (4)  Wikipedia  Hava Durumu (2)  Finans (3)  Günlük Özet (1)
+  create      draft      add        summary    weather        exchange_rate  daily_brief
   list        list       list                  weather_forecast gold_price
   update      delete     complete                              crypto_price
   delete      inbox      delete
@@ -20,7 +20,7 @@ Sen -> Agent (Llama 3.3 70B / Groq, ücretsiz) -> Tool seçer
 `agent.py` ReAct-style bir loop: kullanıcı mesajı → LLM tool seçer →
 tool çalışır → sonuç LLM'e döner → LLM final cevabı üretir.
 
-## Mevcut Tool'lar (19)
+## Mevcut Tool'lar (20)
 
 ### Google Calendar (4)
 - `create_calendar_event` — yeni etkinlik oluşturur
@@ -52,6 +52,9 @@ tool çalışır → sonuç LLM'e döner → LLM final cevabı üretir.
 - `get_exchange_rate` — döviz kuru getirir (USD/TRY, EUR/TRY, GBP/TRY vb.)
 - `get_gold_price` — gram altın fiyatını TL ve USD cinsinden getirir
 - `get_crypto_price` — kripto para fiyatı getirir (BTC, ETH, SOL vb.)
+
+### Günlük Özet (1)
+- `daily_brief` — bugünkü takvim etkinliklerini ve bekleyen görevleri özetler
 
 ## Google Calendar + Gmail Kurulumu
 
@@ -138,6 +141,17 @@ Asistan: Gram Altın: 4.021,30 TL / 104,52 USD
 
 Sen: bitcoin kaç dolar?
 Asistan: BTC = 118,432.50 USD
+
+Sen: günlük özetimi göster
+Asistan: — 19 Temmuz 2026, Pazar —
+
+📅 Bugünkü Etkinlikler:
+  • 10:00 — Haftalık planlama
+  • 14:00 — Proje toplantısı
+
+📋 Bekleyen Görevler:
+  [1] ○ matematik ödevini bitir  (ID:1)
+  [2] ○ raporu gönder  (ID:2)
 ```
 
 ## Memory (RAG) Sistemi
@@ -153,10 +167,6 @@ ilgili geçmiş bilgiler bir sonraki konuşmada prompt'a eklenir.
 - Wikipedia, hava durumu ve finans tool'ları ağ bağlantısı gerektirir
 - OpenWeatherMap ücretsiz tier: günlük 1.000 istek
 - `yfinance` fiyatları Yahoo Finance'ten çeker, anlık borsa fiyatlarında ~15 dk gecikme olabilir
-
-## Planlanan Özellikler
-
-- Gün sonu özeti
 
 ## Dosya Yapısı
 
@@ -175,7 +185,8 @@ personal-agent/
 │   ├── todo.py           # SQLite to-do implementasyonu
 │   ├── weather.py        # OpenWeatherMap hava durumu
 │   ├── wikipedia_tool.py # Wikipedia MediaWiki REST API tool
-│   └── finance_tool.py   # Yahoo Finance döviz/altın/kripto tool'ları
+│   ├── finance_tool.py   # Yahoo Finance döviz/altın/kripto tool'ları
+│   └── daily_brief.py    # Günlük özet: takvim + bekleyen görevler
 └── memory/
     ├── store.py           # ChromaDB AgentMemory sınıfı
     └── chroma_store/      # (gitignore) Vector store verisi

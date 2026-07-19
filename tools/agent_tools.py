@@ -16,6 +16,8 @@ from auth import get_calendar_service, get_gmail_service
 from tools.weather import get_weather as _get_weather, get_forecast as _get_forecast
 from tools.wikipedia_tool import fetch_wikipedia_summary
 from tools.finance_tool import get_exchange_rate, get_gold_price, get_crypto_price
+from tools.daily_brief import daily_brief
+
 
 @tool
 def create_calendar_event(title: str, date: str, time: str, participants: str = "") -> str:
@@ -376,5 +378,6 @@ ALL_TOOLS = [
     fetch_wikipedia_summary,
     get_exchange_rate,
     get_gold_price,
-    get_crypto_price
+    get_crypto_price,
+    daily_brief
 ]
