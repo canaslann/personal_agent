@@ -20,6 +20,9 @@ Sen -> Agent (Llama 3.3 70B / Groq, ücretsiz) -> Tool seçer
 `agent.py` ReAct-style bir loop: kullanıcı mesajı → LLM tool seçer →
 tool çalışır → sonuç LLM'e döner → LLM final cevabı üretir.
 
+Kullanıcı arayüzü: Streamlit tabanlı glass/dark chat UI (`app.py`).
+Terminal arayüzü: `main.py` ile CLI olarak da çalıştırılabilir.
+
 ## Mevcut Tool'lar (20)
 
 ### Google Calendar (4)
@@ -108,6 +111,13 @@ OPENWEATHER_API_KEY=xxxxxxxxxxxx
 
 ## Çalıştırma
 
+### Web Arayüzü (Streamlit)
+```powershell
+streamlit run app.py
+```
+Tarayıcıda `http://localhost:8501` adresinde açılır.
+
+### Terminal (CLI)
 ```powershell
 python main.py
 ```
@@ -174,6 +184,7 @@ ilgili geçmiş bilgiler bir sonraki konuşmada prompt'a eklenir.
 personal-agent/
 ├── agent.py              # LangGraph agent, ReAct loop
 ├── main.py               # CLI giriş noktası
+├── app.py                # Streamlit web arayüzü (glass dark UI)
 ├── auth.py               # Google OAuth yönetimi
 ├── requirements.txt
 ├── .env                  # (gitignore) API key'ler
